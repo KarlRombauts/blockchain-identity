@@ -1,9 +1,11 @@
 const SHA256 = require('crypto-js/sha256')
-const BigHex = require('./BigHex')
+const BigHex = require('../BigHex')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
+const Memory = require('lowdb/adapters/Memory')
 
-const adapter = new FileSync('db.json')
+const test = true
+const adapter = test ? new Memory() : new FileSync('db.json')
 const db = low(adapter)
 db.defaults({ chain: [] }).write()
 
@@ -25,7 +27,7 @@ class Block {
     while (!this.validateHash(target)) {
       this.nonce++
     }
-    console.log(this.hash())
+    console.log(this)
   }
 
   validateHash(target) {
@@ -35,13 +37,15 @@ class Block {
 
 class Blockchain {
   constructor(chain) {
-    this.difficulty = '02FFF'
-    this.chain = chain
+    this.difficulty = '05FFF'
+    this.db = chain
+    this.chain = chain.value()
     this.chain.forEach(block => Object.setPrototypeOf(block, Block.prototype))
     if (this.chain.length === 0) {
       this.addGenesisBlock()
     }
   }
+
   setDifficulty(difficulty) {
     isValid = /[0-9A-Fa-F]{6}/.test(difficulty)
     if (!isValid) {
@@ -67,14 +71,14 @@ class Blockchain {
     const block = new Block(this.chain.length, this.lastBlock.hash(), data)
     block.mine(this.hashTarget)
     this.chain.push(block)
-    db.write()
+    this.db.write()
   }
 
   addGenesisBlock() {
     const genesisBlock = new Block(0, 0, {})
     genesisBlock.mine(this.hashTarget)
     this.chain.push(genesisBlock)
-    db.write()
+    this.db.write()
   }
 
   validate() {
@@ -91,8 +95,8 @@ class Blockchain {
   }
 }
 
-blockchain = new Blockchain(db.get('chain').value())
+blockchain = new Blockchain(db.get('chain'))
 blockchain.add({ phone: 123 })
 blockchain.add({ phone: 345 })
 blockchain.add({ phone: 354 })
-console.log(blockchain.chain)
+// console.log(blockchain.chain)
