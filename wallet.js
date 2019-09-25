@@ -24,7 +24,7 @@ class Wallet {
       .get('versions')
       .last()
       .value()
-    console.log(previousData)
+
     if (previousData) {
       const allData = { ...previousData.data, ...data }
       data = Object.keys(allData).reduce((carry, key) => {
@@ -38,9 +38,7 @@ class Wallet {
     const identity = new Identity(this, data)
 
     const signSecretKey = ec.keyFromSecret(this.db.get('signNonce'))
-    const msg = SHA256(
-      identity.walletId + identity.timestamp + identity.merkleRoot,
-    ).toString()
+    const msg = SHA256(identity.id).toString()
     const signature = signSecretKey.sign(msg).toHex()
     identity.sign(signature)
 
@@ -52,8 +50,7 @@ class Wallet {
     this.db
       .get('versions')
       .push({
-        walletId: this.id,
-        merkleRoot: identity.merkleRoot,
+        identity: identity,
         data: data,
       })
       .write()
@@ -92,49 +89,4 @@ class Wallet {
   }
 }
 
-const myWallet = new Wallet()
-const verifier = new Verifier('Australian Government', 'Australia')
-//TODO: encrypt data when sending to verifier
-
-const identity = myWallet.addIdentity({
-  phone: '0488300793',
-  address: '23 Flowerdale Rd',
-})
-
-console.log('Identity created')
-identity.checkSignature()
-verifier.verifyIdentity(identity)
-identity.checkVerification()
-
-myWallet.sendForVerification(
-  '1adb66d23c2f994ae040b0df1847132caea1f7df9c38674701ffd15ce1fb5be8',
-)
-
-// console.log(identity)
-
-// const identity2 = myWallet.addIdentity({
-//   name: 'Karl Rombauts',
-//   passportNo: '045534403',
-// })
-
-// console.log('Identity created')
-// identity2.checkSignature()
-// verifier.verifyIdentity(identity2)
-// identity2.checkVerification()
-
-// console.log(identity)
-
-// // console.log(identity)
-
-// setTimeout(() => {
-//   myWallet.addIdentity({
-//     phone: '9813 8025',
-//     name: 'Karl Rombauts',
-//   })
-// }, 1000)
-
-// setTimeout(() => {
-//   myWallet.addIdentity({
-//     name: null,
-//   })
-// }, 2000)
+module.exports = Wallet
