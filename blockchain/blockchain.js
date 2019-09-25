@@ -3,6 +3,7 @@ const BigHex = require('../BigHex')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 const Memory = require('lowdb/adapters/Memory')
+const Mempool = require('../Mempool')
 
 const test = true
 const adapter = test ? new Memory() : new FileSync('db.json')
@@ -37,9 +38,10 @@ class Block {
 
 class Blockchain {
   constructor(chain) {
-    this.difficulty = '05FFF'
-    this.db = chain
-    this.chain = chain.value()
+    this.difficulty = '00FFF'
+    this.db = db.get('chain')
+    this.chain = this.db.value()
+    this.mempool = new Mempool()
     this.chain.forEach(block => Object.setPrototypeOf(block, Block.prototype))
     if (this.chain.length === 0) {
       this.addGenesisBlock()
@@ -95,8 +97,4 @@ class Blockchain {
   }
 }
 
-blockchain = new Blockchain(db.get('chain'))
-blockchain.add({ phone: 123 })
-blockchain.add({ phone: 345 })
-blockchain.add({ phone: 354 })
-// console.log(blockchain.chain)
+module.exports = Blockchain
