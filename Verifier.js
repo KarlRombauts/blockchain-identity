@@ -4,16 +4,18 @@ const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 const Memory = require('lowdb/adapters/Memory')
 const EdDSA = require('elliptic').eddsa
+const blockchain = require('./blockchain/blockchain')
 
 const ec = new EdDSA('ed25519')
 const verifiersDB = low(new FileSync(`verifiers/db.json`))
 verifiersDB.defaults({ verifiers: [] }).write()
 
 class Verifier {
-  constructor(name, location, verifierID) {
+  constructor(name, location, blockchain) {
     this.name = name
     this.location = location
     this.id = SHA256(name + location).toString()
+    this.blockchain = blockchain
 
     this.connectDatabase()
     const existingRecord = verifiersDB
@@ -43,21 +45,45 @@ class Verifier {
     }
   }
   verifyIdentity(identity) {
-    // some checks for identity
-    const root = identity.merkleRoot
     const timestamp = Date.now()
+    const msg = SHA256(identity.merkleRoot + timestamp).toString()
+    const signNonce = this.private.get('signNonce').value()
+    const signSecretKey = ec.keyFromSecret(signNonce)
+    const signedRoot = signSecretKey.sign(msg).toHex()
 
-    const msg = SHA256(root + timestamp).toString()
-    // console.log(msg)
-    const nonce = this.private.get('signNonce').value()
-    const signKey = ec.keyFromSecret(nonce)
-    const signedRoot = signKey.sign(msg).toHex()
-    identity.addVerification({
+    identity.verification = {
       signedRoot: signedRoot,
       verifierId: this.id,
       timestamp: timestamp,
-    })
+    }
+
+    return identity
   }
+  verifyNext() {
+    const { data, identity, verifierData } = this.getFirstFromPool()
+    console.log(data)
+
+    const verifiedIdentity = this.verifyIdentity(identity)
+
+    verifierData.write()
+    console.log(blockchain)
+    this.blockchain.mempool.add(verifiedIdentity)
+  }
+
+  getFirstFromPool() {
+    const verifierData = this.getData()
+
+    const pool = verifierData.value().pool
+    const message = pool.shift()
+
+    const encryptNonce = this.private.get('encryptNonce').value()
+    const encryptSecretKey = cryptico.generateRSAKey(encryptNonce, 1024)
+    const decryptedData = cryptico.decrypt(message.data, encryptSecretKey)
+
+    const data = JSON.parse(decryptedData.plaintext)
+    return { data, identity: message.identity, verifierData }
+  }
+
   connectDatabase() {
     this.pool = low(new FileSync(`verifiers/pool/${this.id}.json`))
     this.private = low(new FileSync(`verifiers/private/${this.id}.json`))
@@ -82,8 +108,12 @@ class Verifier {
 
     return { signNonce, encryptNonce }
   }
+
+  getData() {
+    return Verifier.getDataFromId(this.id)
+  }
+
   static getDataFromId(id) {
-    console.log(id)
     return verifiersDB.get('verifiers').find({ id: id })
   }
 }
