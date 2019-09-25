@@ -7,10 +7,11 @@ class Node extends Leaf {
     this.hash = this.createHash(left, right)
     left.parent = this
     this.left = left
+    this.right = right
+
     if (right) {
       right.parent = this
     }
-    this.right = right
   }
 
   get children() {
