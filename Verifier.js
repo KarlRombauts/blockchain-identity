@@ -11,7 +11,7 @@ verifiersDB.defaults({ verifiers: [] }).write()
 
 class Verifier {
   constructor(name, location, verifierID) {
-    this.name = location
+    this.name = name
     this.location = location
     this.id = SHA256(name + location).toString()
 
@@ -29,6 +29,8 @@ class Verifier {
         .get('verifiers')
         .push({
           id: this.id,
+          name: this.name,
+          location: this.location,
           encryptPublicKey: this.encryptPublicKey,
           signPublicKey: this.signPublicKey,
           timestamp: Date.now(),
