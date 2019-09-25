@@ -82,6 +82,10 @@ class Verifier {
 
     return { signNonce, encryptNonce }
   }
+  static getDataFromId(id) {
+    console.log(id)
+    return verifiersDB.get('verifiers').find({ id: id })
+  }
 }
 
 module.exports = Verifier
