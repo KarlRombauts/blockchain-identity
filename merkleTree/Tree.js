@@ -40,7 +40,6 @@ class MerkleTree {
     const leaves = data.map(dataItem => {
       return this.leaves.find(leaf => leaf.hash === SHA256(dataItem).toString())
     })
-    console.log(leaves)
 
     const proof = []
     leaves.forEach((leaf, index) => {
@@ -59,6 +58,9 @@ class MerkleTree {
 
         const proofIndex = MultiDArray.indexOf(proof, node.parent.hash)
         if (proofIndex !== -1) {
+          if (subProof.length === 1 && subProof[0].length === 1) {
+            subProof[0] = subProof[0][0]
+          }
           MultiDArray.set(proof, proofIndex, subProof)
           break
         }
@@ -68,15 +70,14 @@ class MerkleTree {
         proof.push(...subProof)
       }
     })
-    console.log(JSON.stringify(proof))
 
     return proof
   }
 
   static validate(proof, root) {
-    const hashedData = SHA256(data.toString()).toString()
-    return root === recreatedRoot
+    return root === this.calculateRoot(proof)
   }
+
   static calculateRoot(proof) {
     return proof.reduce((carry, node, index) => {
       if (Array.isArray(node)) {
@@ -96,18 +97,24 @@ class MerkleTree {
       return SHA256(BigHex.add(node, carry)).toString()
     }, '0')
   }
+  static getDataFromProof(proof) {
+    return proof.flat(Infinity).filter(item => {
+      return !typeof item === 'string' || !/[0-9a-fA-F]{64}/.test(item)
+    })
+  }
 }
 
-const data = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map(item =>
-  SHA256(item).toString(),
-)
-// console.log(data)
+module.exports = MerkleTree
+// const data = ['A', 'B', 'C', 'D', 'E', 'F'].map(item => SHA256(item).toString())
+// // console.log(data)
 
-const merkleTree = new MerkleTree(data)
+// const merkleTree = new MerkleTree(data)
 // console.log(merkleTree)
 
-const proof = merkleTree.getProof(['D'])
-console.log(proof)
-module.exports = MerkleTree
-console.log('\nhash', merkleTree.root + '\n')
-console.log('proof', MerkleTree.calculateRoot(proof))
+// const proof = merkleTree.getProof(['E', 'F'])
+// console.log(proof)
+// console.log('\nhash', merkleTree.root + '\n')
+
+// console.log('proof', MerkleTree.calculateRoot(proof))
+// console.log('valid', MerkleTree.validate(proof, merkleTree.root))
+// MerkleTree.getDataFromProof(proof)

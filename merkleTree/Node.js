@@ -23,6 +23,9 @@ class Node extends Leaf {
     const leftData = left.hash
     const rightData = right ? right.hash : '0'
 
+    if (!right) {
+      return left.hash
+    }
     return SHA256(BigHex.add(leftData, rightData)).toString()
   }
 }
