@@ -3,6 +3,7 @@ const Identity = require('./identity')
 const Verifier = require('./Verifier')
 const cryptico = require('cryptico')
 const EdDSA = require('elliptic').eddsa
+const MerkleTree = require('./merkleTree/Tree')
 
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
@@ -13,7 +14,7 @@ class Wallet {
     const nonces = this.generateKeys()
     this.id = SHA256(this.signPublicKey).toString()
     this.db = low(new FileSync(`wallets/private/${this.id}.json`))
-    this.db.defaults({ versions: [] }).write()
+    this.db.defaults({ versions: [], receivedIdentities: [] }).write()
     this.db.set('signNonce', nonces.signNonce).write()
     this.db.set('encryptNonce', nonces.encryptNonce).write()
     this.db.set('id', this.id).write()
@@ -86,6 +87,27 @@ class Wallet {
 
     verifier.value().pool.push(message)
     verifier.write()
+  }
+
+  share(keys, walletID) {
+    const message = this.db
+      .get('versions')
+      .last()
+      .value()
+
+    console.log(message)
+
+    const merkleTree = Identity.createMerkleTree(message.data)
+    const shareData = keys.map(key => {
+      const data = {}
+      data[key] = message.data[key]
+      return JSON.stringify(data)
+    })
+    console.log(shareData)
+    const proof = merkleTree.getProof(shareData)
+    console.log('proof', MerkleTree.calculateRoot(proof))
+
+    console.log(MerkleTree.validate(proof, message.identity.merkleRoot))
   }
 }
 
