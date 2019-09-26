@@ -1,6 +1,8 @@
 const Leaf = require('./Leaf')
 const Node = require('./Node')
 const SHA256 = require('crypto-js/sha256')
+const MultiDArray = require('../MultiDArray')
+const BigHex = require('../BigHex')
 
 class MerkleTree {
   constructor(leaves) {
@@ -32,28 +34,80 @@ class MerkleTree {
   }
 
   getProof(data) {
-    const proof = []
-    let node = this.leaves.find(
-      leaf => leaf.hash === SHA256(data.toString()).toString(),
-    )
-
-    while (node.parent !== null) {
-      if (node.sibling !== undefined) {
-        proof.push(node.sibling)
-      }
-      node = node.parent
+    if (!Array.isArray(data)) {
+      data = [data]
     }
+    const leaves = data.map(dataItem => {
+      return this.leaves.find(leaf => leaf.hash === SHA256(dataItem).toString())
+    })
+    console.log(leaves)
+
+    const proof = []
+    leaves.forEach((leaf, index) => {
+      const subProof = [[data[index]]]
+      let node = leaf
+      const proofIndex = MultiDArray.indexOf(proof, leaf.hash)
+      if (proofIndex !== -1) {
+        MultiDArray.set(proof, proofIndex, [data[index]])
+        return
+      }
+
+      while (node.parent !== null) {
+        if (node.sibling !== undefined) {
+          subProof.push(node.sibling.hash)
+        }
+
+        const proofIndex = MultiDArray.indexOf(proof, node.parent.hash)
+        if (proofIndex !== -1) {
+          MultiDArray.set(proof, proofIndex, subProof)
+          break
+        }
+        node = node.parent
+      }
+      if (proof.length === 0) {
+        proof.push(...subProof)
+      }
+    })
+    console.log(JSON.stringify(proof))
+
     return proof
   }
 
-  static validate(data, proof, root) {
+  static validate(proof, root) {
     const hashedData = SHA256(data.toString()).toString()
-    const recreatedRoot = proof.reduce(
-      (carry, node) => SHA256(node.hash + carry).toString(),
-      hashedData,
-    )
     return root === recreatedRoot
+  }
+  static calculateRoot(proof) {
+    return proof.reduce((carry, node, index) => {
+      if (Array.isArray(node)) {
+        if (node.length === 1) {
+          if (index === 0) {
+            return SHA256(node[0]).toString()
+          } else {
+            return SHA256(
+              BigHex.add(SHA256(node[0]).toString(), carry),
+            ).toString()
+          }
+        }
+        return SHA256(
+          BigHex.add(MerkleTree.calculateRoot(node), carry),
+        ).toString()
+      }
+      return SHA256(BigHex.add(node, carry)).toString()
+    }, '0')
   }
 }
 
+const data = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map(item =>
+  SHA256(item).toString(),
+)
+// console.log(data)
+
+const merkleTree = new MerkleTree(data)
+// console.log(merkleTree)
+
+const proof = merkleTree.getProof(['D'])
+console.log(proof)
 module.exports = MerkleTree
+console.log('\nhash', merkleTree.root + '\n')
+console.log('proof', MerkleTree.calculateRoot(proof))
