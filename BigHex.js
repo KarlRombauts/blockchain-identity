@@ -27,6 +27,29 @@ class BigHex {
     }
     return true
   }
+
+  static add(num1, num2) {
+    const [num1normalised, num2normalised] = this.normalise(num1, num2)
+    const num1array = num1normalised.split('').reverse()
+    const num2array = num2normalised.split('').reverse()
+
+    const sum = num1array.reduce(
+      (acc, num1digitHex, index) => {
+        const num1digit = parseInt(num1digitHex, 16)
+        const num2digit = parseInt(num2array[index], 16)
+        const sum = num1digit + num2digit + acc.carry
+        const hexSum = (sum % 16).toString(16)
+        return { sum: hexSum + acc.sum, carry: Math.floor(sum / 16) }
+      },
+      { sum: '', carry: 0 },
+    )
+
+    if (sum.carry > 0) {
+      return sum.carry.toString(16) + sum.sum
+    }
+
+    return sum.sum
+  }
 }
 
 module.exports = BigHex
