@@ -13,7 +13,7 @@ class Identity {
     this.timestamp = Date.now()
     this.walletId = wallet.id
     this.verification = {}
-    this.merkleRoot = this.createMerkleTree(data).root
+    this.merkleRoot = Identity.createMerkleTree(data).root
 
     this.signature = {
       key: wallet.signPublicKey,
@@ -23,7 +23,7 @@ class Identity {
     ).toString()
   }
 
-  createMerkleTree(data) {
+  static createMerkleTree(data) {
     const dataArray = Object.keys(data).map(key => {
       const item = {}
       item[key] = data[key]
