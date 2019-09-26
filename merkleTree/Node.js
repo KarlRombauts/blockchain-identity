@@ -1,5 +1,6 @@
 const Leaf = require('./Leaf')
 const SHA256 = require('crypto-js/sha256')
+const BigHex = require('../BigHex')
 
 class Node extends Leaf {
   constructor(left, right) {
@@ -20,8 +21,9 @@ class Node extends Leaf {
 
   createHash(left, right) {
     const leftData = left.hash
-    const rightData = right ? right.hash : ''
-    return SHA256(leftData + rightData).toString()
+    const rightData = right ? right.hash : '0'
+
+    return SHA256(BigHex.add(leftData, rightData)).toString()
   }
 }
 
